@@ -1,5 +1,9 @@
+// File: lib/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+
+import 'auth_view_model.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'home_screen.dart';
@@ -16,28 +20,38 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  void _login() {
+  void _login(AuthViewModel auth) async {
     if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      bool success = await auth.login(
+        emailController.text,
+        passwordController.text,
       );
+      if (success && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else if (auth.errorMessage != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(auth.errorMessage!)),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthViewModel>(context);
+
     return Scaffold(
-        appBar: AppBar(title: Text("Login", style: TextStyle(fontSize: 18.sp))),
+        appBar: AppBar(
+          title: Text("Login", style: TextStyle(fontSize: 18.sp)),
+        ),
         body: Center(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(16.w),
               child: Form(
                 key: _formKey,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Email Field
+                    // Email
                     TextFormField(
                       controller: emailController,
                       decoration: const InputDecoration(labelText: 'Email'),
@@ -53,32 +67,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 20.h),
 
-                    // Password Field
+                    // Password
                     TextFormField(
                       controller: passwordController,
                       obscureText: true,
                       decoration: const InputDecoration(labelText: 'Password'),
-                      validator: (value) {
-                        if (value == null || value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      validator: (value) =>
+                      value == null || value.length < 6
+                          ? 'Password must be at least 6 characters'
+                          : null,
                     ),
                     SizedBox(height: 20.h),
 
-                    // Forgot Password Button
+                    // Forgot Password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/forgot-password'),
                         child: Text("Forgot Password?", style: TextStyle(fontSize: 14.sp)),
                       ),
                     ),
@@ -89,19 +95,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 15.h),
                       ),
-                      onPressed: _login,
-                      child: Text("Login", style: TextStyle(fontSize: 16.sp)),
+                      onPressed: auth.isLoading ? null : () => _login(auth),
+                      child: auth.isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text("Login", style: TextStyle(fontSize: 16.sp)),
                     ),
                     SizedBox(height: 20.h),
 
-                    // Sign Up Navigation
+                    // Signup Button
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SignUpScreen()),
-                        );
-                      },
+                      onPressed: () => Navigator.pushNamed(context, '/signup'),
                       child: Text(
                         "Don't have an account? Sign Up",
                         style: TextStyle(fontSize: 14.sp),
